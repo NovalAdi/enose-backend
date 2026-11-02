@@ -11,8 +11,8 @@ function App() {
     e.preventDefault();
     setLoading(true);
     try {
-      const predRes = await axios.post('http://localhost:8000/predict', { data: inputs });
-      const expRes = await axios.post('http://localhost:8000/explain', { data: inputs });
+      const predRes = await axios.post('https://enose-backend-gn0a.onrender.com/predict', { data: inputs });
+      const expRes = await axios.post('https://enose-backend-gn0a.onrender.com/explain', { data: inputs });
       
       const shapData = expRes.data.feature_names.map((name: string, i: number) => ({
         name,
