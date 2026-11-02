@@ -8,7 +8,7 @@ import shap
 import numpy as np
 import os
 
-app = FastAPI()
+app = FastAPI(title="E-Nose API", docs_url="/docs", redoc_url="/redoc")
 
 # Add CORS middleware to allow requests from the React frontend
 app.add_middleware(
