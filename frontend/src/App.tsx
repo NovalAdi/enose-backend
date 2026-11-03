@@ -18,16 +18,16 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const predRes = await axios.post('https://enose-backend-gn0a.onrender.com/predict', { data: inputs });
-      const expRes = await axios.post('https://enose-backend-gn0a.onrender.com/explain', { data: inputs });
+      const response = await axios.post('https://enose-backend-gn0a.onrender.com/predict-and-explain', { data: inputs });
+      const { prediction, feature_names, shap_values } = response.data;
       
-      const shapData = expRes.data.feature_names.map((name: string, i: number) => ({
+      const shapData = feature_names.map((name: string, i: number) => ({
         name,
-        value: expRes.data.shap_values[i]
+        value: shap_values[i]
       }));
 
       setResult({
-        prediction: predRes.data.prediction,
+        prediction,
         shapData
       });
     } catch (err) {

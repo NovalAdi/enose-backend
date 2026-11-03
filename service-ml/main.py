@@ -45,36 +45,32 @@ async def predict(input_data: InferenceInput):
     
     return {"prediction": prediction[0]}
 
-@app.post("/explain")
-async def explain(input_data: InferenceInput):
+@app.post("/predict-and-explain")
+async def predict_and_explain(input_data: InferenceInput):
     if len(input_data.data) != 10:
         raise HTTPException(status_code=400, detail="Input must have exactly 10 features")
     
     data_array = np.array(input_data.data).reshape(1, -1)
     scaled_data = scaler.transform(data_array)
     
-    # SHAP explainer
-    # Note: For Random Forest, TreeExplainer is best. 
-    # For a production app, you might want to pre-calculate/fit the background dataset.
-    # Here we use the model itself which for TreeExplainer is fine.
+    # Prediction
+    prediction = model.predict(scaled_data)[0]
+    
+    # Explanation (SHAP)
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(scaled_data)
     
-    # SHAP values can be nested for multi-class classification
-    # Let's return the values for the predicted class
-    prediction = model.predict(scaled_data)[0]
     class_idx = np.where(model.classes_ == prediction)[0][0]
     
-    # If binary, shap_values might be 2D; if multiclass, 3D
     if len(shap_values.shape) == 3:
         values = shap_values[class_idx][0].tolist()
     else:
         values = shap_values[0].tolist()
 
     return {
+        "prediction": str(prediction),
         "feature_names": FEATURE_NAMES,
-        "shap_values": values,
-        "prediction": prediction
+        "shap_values": values
     }
 
 if __name__ == "__main__":
