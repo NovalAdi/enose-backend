@@ -69,13 +69,14 @@ async def predict_and_explain(input_data: InferenceInput):
         # Explanation (SHAP)
         shap_values = explainer.shap_values(scaled_data)
         
-        # Handle different SHAP output formats (list across classes or ndarray)
+        # Handle different SHAP output formats
         if isinstance(shap_values, list):
             class_idx = list(model.classes_).index(prediction)
             values = shap_values[class_idx][0].tolist()
         elif len(shap_values.shape) == 3:
+            # Shape is (samples, features, classes) -> index 0 is sample, class_idx is last
             class_idx = list(model.classes_).index(prediction)
-            values = shap_values[class_idx][0].tolist()
+            values = shap_values[0, :, class_idx].tolist()
         else:
             values = shap_values[0].tolist()
 
