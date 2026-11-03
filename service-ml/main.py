@@ -32,9 +32,16 @@ scaler = joblib.load(SCALER_PATH)
 FEATURE_NAMES = ['MQ6', 'MQ4', 'TGS2620', 'MQ5', 'MQ2', 'TGS2602', 'MQ7', 'MQ3', 'MQ135', 'MQ138']
 
 class InferenceInput(BaseModel):
-    data: list[float]  # Should be 10 features
+    data: list[float] = [0.0] * 10  # Default dummy data
 
-@app.post("/predict")
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": [0.5, 0.2, 0.1, 0.8, 0.3, 0.4, 0.1, 0.2, 0.9, 0.1]
+            }
+        }
+
+@app.post("/predict", summary="Predict odor class", description="Takes 10 sensor values and returns the predicted odor class.")
 async def predict(input_data: InferenceInput):
     if len(input_data.data) != 10:
         raise HTTPException(status_code=400, detail="Input must have exactly 10 features")
