@@ -28,6 +28,8 @@ if not os.path.exists(MODEL_PATH) or not os.path.exists(SCALER_PATH):
 
 model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
+# Initialize Explainer globally to save memory and processing time
+explainer = shap.TreeExplainer(model)
 
 FEATURE_NAMES = ['MQ6', 'MQ4', 'TGS2620', 'MQ5', 'MQ2', 'TGS2602', 'MQ7', 'MQ3', 'MQ135', 'MQ138']
 
@@ -57,28 +59,33 @@ async def predict_and_explain(input_data: InferenceInput):
     if len(input_data.data) != 10:
         raise HTTPException(status_code=400, detail="Input must have exactly 10 features")
     
-    data_array = np.array(input_data.data).reshape(1, -1)
-    scaled_data = scaler.transform(data_array)
-    
-    # Prediction
-    prediction = model.predict(scaled_data)[0]
-    
-    # Explanation (SHAP)
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(scaled_data)
-    
-    class_idx = np.where(model.classes_ == prediction)[0][0]
-    
-    if len(shap_values.shape) == 3:
-        values = shap_values[class_idx][0].tolist()
-    else:
-        values = shap_values[0].tolist()
+    try:
+        data_array = np.array(input_data.data).reshape(1, -1)
+        scaled_data = scaler.transform(data_array)
+        
+        # Prediction
+        prediction = model.predict(scaled_data)[0]
+        
+        # Explanation (SHAP)
+        shap_values = explainer.shap_values(scaled_data)
+        
+        # Handle different SHAP output formats (list across classes or ndarray)
+        if isinstance(shap_values, list):
+            class_idx = list(model.classes_).index(prediction)
+            values = shap_values[class_idx][0].tolist()
+        elif len(shap_values.shape) == 3:
+            class_idx = list(model.classes_).index(prediction)
+            values = shap_values[class_idx][0].tolist()
+        else:
+            values = shap_values[0].tolist()
 
-    return {
-        "prediction": str(prediction),
-        "feature_names": FEATURE_NAMES,
-        "shap_values": values
-    }
+        return {
+            "prediction": str(prediction),
+            "feature_names": FEATURE_NAMES,
+            "shap_values": values
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

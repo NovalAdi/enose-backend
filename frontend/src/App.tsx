@@ -1,17 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid 
 } from 'recharts';
-import { Activity, Thermometer, Info, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 
 const FEATURE_NAMES = ['MQ6', 'MQ4', 'TGS2620', 'MQ5', 'MQ2', 'TGS2602', 'MQ7', 'MQ3', 'MQ135', 'MQ138'];
 
 function App() {
-  const [inputs, setInputs] = useState(Array(10).fill(0));
+  const [inputs, setInputs] = useState(Array(10).fill(0.5));
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Automatically fetch prediction and XAI on load with default sample data
+  useEffect(() => {
+    const fetchInitialPrediction = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post('https://enose-backend-gn0a.onrender.com/predict-and-explain', { data: inputs });
+        const { prediction, feature_names, shap_values } = response.data;
+        
+        const shapData = feature_names.map((name: string, i: number) => ({
+          name,
+          value: shap_values[i]
+        }));
+
+        setResult({
+          prediction,
+          shapData
+        });
+      } catch (err) {
+        console.error(err);
+        setError('Failed to fetch initial prediction on load.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialPrediction();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,44 +66,38 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'system-ui, sans-serif' }}>
       {/* Navbar */}
-      <nav className="bg-white border-b px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className="bg-indigo-600 p-2 rounded-lg">
-            <Activity className="text-white w-5 h-5" />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-gray-800">E-Nose Insight</span>
+      <nav style={{ background: 'white', borderBottom: '1px solid #E2E8F0', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ background: '#4F46E5', color: 'white', padding: '8px 12px', borderRadius: '8px', fontWeight: 'bold' }}>EN</div>
+          <span style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>E-Nose Insight & XAI</span>
         </div>
-        <div className="hidden md:flex gap-6 text-sm font-medium text-gray-500">
-          <a href="#" className="hover:text-indigo-600 transition">Dashboard</a>
-          <a href="#" className="hover:text-indigo-600 transition">API Docs</a>
+        <div>
+          <a href="https://enose-backend-gn0a.onrender.com/docs" target="_blank" rel="noreferrer" style={{ color: '#4F46E5', textDecoration: 'none', fontWeight: '600' }}>API Docs ↗</a>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-6 md:p-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '32px' }}>
           
           {/* Input Section */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Thermometer className="text-indigo-600 w-5 h-5" />
-                <h2 className="font-bold text-lg text-gray-800">Sensor Inputs</h2>
-              </div>
+          <div>
+            <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '16px' }}>Sensor Inputs</h2>
               
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                   {inputs.map((val, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-500 uppercase ml-1">
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase' }}>
                         {FEATURE_NAMES[i]}
                       </label>
                       <input
                         type="number"
                         step="0.0001"
                         value={val}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', outline: 'none' }}
                         onChange={(e) => {
                           const newInputs = [...inputs];
                           newInputs[i] = parseFloat(e.target.value) || 0;
@@ -90,70 +111,52 @@ function App() {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 mt-4"
+                  style={{ width: '100%', background: '#4F46E5', color: 'white', fontWeight: 'bold', padding: '14px', borderRadius: '8px', border: 'none', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
                 >
-                  {loading ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>Analyze Sample <ChevronRight className="w-5 h-5" /></>
-                  )}
+                  {loading ? 'Analyzing Sample...' : 'Analyze & Explain'}
                 </button>
               </form>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <span className="text-sm font-medium">{error}</span>
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '16px', borderRadius: '8px', marginTop: '16px', fontSize: '14px' }}>
+                {error}
               </div>
             )}
           </div>
 
           {/* Results Section */}
-          <div className="lg:col-span-7">
+          <div>
             {!result && !loading ? (
-              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-gray-200 p-10">
-                <div className="bg-gray-50 p-4 rounded-full mb-4">
-                  <Info className="text-gray-400 w-8 h-8" />
-                </div>
-                <h3 className="text-gray-800 font-bold text-xl mb-2">Ready for analysis</h3>
-                <p className="text-gray-500 max-w-xs text-sm leading-relaxed">
-                  Enter sensor data on the left to get AI-powered odor classification and feature explanations.
-                </p>
+              <div style={{ height: '100%', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', background: 'white', borderRadius: '16px', border: '2px dashed #E2E8F0', padding: '40px', color: '#64748B' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1E293B', marginBottom: '8px' }}>Ready for analysis</h3>
+                <p style={{ fontSize: '14px', maxWidth: '280px' }}>Enter sensor data on the left to get AI-powered odor classification and feature explanations.</p>
               </div>
             ) : (
-              <div className={`space-y-6 transition-all duration-500 ${loading ? 'opacity-50 blur-sm' : 'opacity-100'}`}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', opacity: loading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
                 {/* Prediction Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex items-center justify-between bg-gradient-to-r from-white to-indigo-50/30">
+                <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(to right, #ffffff, #EEF2FF)' }}>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1 uppercase tracking-wider">Classification Result</p>
-                    <h2 className="text-5xl font-black text-indigo-900 tracking-tighter">
-                      Grade <span className="text-indigo-600">{result?.prediction}</span>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>Classification Result</p>
+                    <h2 style={{ fontSize: '3rem', fontWeight: '900', color: '#312E81', margin: 0 }}>
+                      Grade <span style={{ color: '#4F46E5' }}>{result?.prediction}</span>
                     </h2>
-                  </div>
-                  <div className="hidden md:block">
-                    <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <span className="text-3xl font-bold text-indigo-600">{result?.prediction}</span>
-                    </div>
                   </div>
                 </div>
 
                 {/* XAI Chart Card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-2">
-                      <Activity className="text-indigo-600 w-5 h-5" />
-                      <h3 className="font-bold text-lg text-gray-800">Feature Explanation (SHAP)</h3>
-                    </div>
-                    <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">XAI POWERED</span>
+                <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#1E293B', margin: 0 }}>Feature Explanation (SHAP)</h3>
+                    <span style={{ fontSize: '10px', fontWeight: 'bold', background: '#EEF2FF', color: '#4F46E5', padding: '4px 8px', borderRadius: '4px' }}>XAI POWERED</span>
                   </div>
                   
-                  <div className="h-[350px] w-full">
+                  <div style={{ height: '320px', width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
                         data={result?.shapData} 
                         layout="vertical"
-                        margin={{ left: 20, right: 30 }}
+                        margin={{ left: 20, right: 20 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
                         <XAxis type="number" hide />
@@ -162,17 +165,16 @@ function App() {
                           type="category" 
                           axisLine={false} 
                           tickLine={false} 
-                          width={80}
+                          width={70}
                           style={{ fontSize: '12px', fontWeight: 'bold', fill: '#64748B' }}
                         />
                         <Tooltip 
-                          cursor={{ fill: 'transparent' }}
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               return (
-                                <div className="bg-white shadow-xl border rounded-lg p-3 text-xs">
-                                  <p className="font-bold text-gray-800">{payload[0].payload.name}</p>
-                                  <p className="text-indigo-600 mt-1 font-mono">Value: {payload[0].value.toFixed(4)}</p>
+                                <div style={{ background: 'white', padding: '10px', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                                  <p style={{ fontWeight: 'bold', margin: 0 }}>{payload[0].payload.name}</p>
+                                  <p style={{ color: '#4F46E5', margin: '4px 0 0 0', fontFamily: 'monospace' }}>Value: {Number(payload[0].value).toFixed(4)}</p>
                                 </div>
                               );
                             }
@@ -182,7 +184,7 @@ function App() {
                         <Bar 
                           dataKey="value" 
                           radius={[0, 4, 4, 0]}
-                          barSize={24}
+                          barSize={20}
                         >
                           {result?.shapData.map((entry: any, index: number) => (
                             <Cell 
@@ -194,13 +196,14 @@ function App() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="mt-4 flex justify-center gap-6 text-[10px] font-bold text-gray-400">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 bg-[#4F46E5] rounded-sm"></div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '16px', fontSize: '11px', fontWeight: 'bold', color: '#64748B' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '10px', height: '10px', background: '#4F46E5', borderRadius: '2px' }}></div>
                       <span>POSITIVE INFLUENCE</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 bg-[#EC4899] rounded-sm"></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '10px', height: '10px', background: '#EC4899', borderRadius: '2px' }}></div>
                       <span>NEGATIVE INFLUENCE</span>
                     </div>
                   </div>

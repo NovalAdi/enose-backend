@@ -1,6 +1,13 @@
-/* Basic styles */
 body {
-  font-family: sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: #F8FAFC;
+  color: #0F172A;
   margin: 0;
   padding: 0;
 }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.btn { background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; }
+.input-field { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; }
